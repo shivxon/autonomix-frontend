@@ -21,6 +21,26 @@ export default function App() {
 
   const endpoint = useMemo(() => apiBase.replace(/\/$/, ""), [apiBase]);
 
+  const safeParseJson = async (res: Response) => {
+    const text = await res.text();
+    if (!text) {
+      return { data: { error: "Empty response body" }, raw: "" };
+    }
+    try {
+      return { data: JSON.parse(text), raw: text };
+    } catch (error) {
+      return {
+        data: {
+          error: "Non-JSON response from API",
+          status: res.status,
+          statusText: res.statusText,
+          raw: text,
+        },
+        raw: text,
+      };
+    }
+  };
+
   const handleError = (error: unknown) => {
     setStatus("Error");
     setOutput({ error: String(error) });
@@ -35,9 +55,9 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript }),
       });
-      const data = await res.json();
+      const { data } = await safeParseJson(res);
       setOutput(data);
-      setStatus(res.ok ? "Completed" : "Error");
+      setStatus(res.ok ? "Completed" : `Error (${res.status})`);
     } catch (error) {
       handleError(error);
     } finally {
@@ -54,10 +74,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript }),
       });
-      const data = await res.json();
+      const { data } = await safeParseJson(res);
       setOutput(data);
       if (!res.ok) {
-        setStatus("Error");
+        setStatus(`Error (${res.status})`);
         return;
       }
       setStatus(`Queued job ${data.jobId}. Polling...`);
@@ -65,7 +85,7 @@ export default function App() {
 
       const poll = async () => {
         const pollRes = await fetch(`${endpoint}/api/jobs/${data.jobId}`);
-        const pollData = await pollRes.json();
+        const { data: pollData } = await safeParseJson(pollRes);
         setOutput(pollData);
         setStatus(`Status: ${pollData.status}`);
         if (pollData.status === "completed" || pollData.status === "error") {
