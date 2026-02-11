@@ -46,25 +46,6 @@ export default function App() {
     setOutput({ error: String(error) });
   };
 
-  const submitSync = async () => {
-    setLoading(true);
-    setStatus("Submitting transcript (sync)...");
-    try {
-      const res = await fetch(`${endpoint}/api/graphs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
-      });
-      const { data } = await safeParseJson(res);
-      setOutput(data);
-      setStatus(res.ok ? "Completed" : `Error (${res.status})`);
-    } catch (error) {
-      handleError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const submitAsync = async () => {
     setLoading(true);
     setStatus("Queueing job...");
@@ -120,7 +101,7 @@ export default function App() {
         <div className="card">
           <label>Tips</label>
           <p>Run the backend on `http://localhost:3000` or update the base URL above.</p>
-          <p>Use async to test job polling and idempotency.</p>
+          <p>This UI uses the async job endpoint with polling.</p>
         </div>
       </div>
 
@@ -132,8 +113,7 @@ export default function App() {
       />
 
       <div className="actions">
-        <button onClick={submitSync} disabled={loading}>Generate (sync)</button>
-        <button className="secondary" onClick={submitAsync} disabled={loading}>Generate (async)</button>
+        <button onClick={submitAsync} disabled={loading}>Generate</button>
       </div>
 
       <div className="status">{status}</div>
